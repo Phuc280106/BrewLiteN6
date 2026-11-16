@@ -433,13 +433,14 @@ export class OrdersService {
 
       const orderItems = input.items.map((item) => {
         const product = productsById.get(item.productId)!;
-        const toppingsPrice = item.toppings.reduce((total, toppingKey) => {
+        const itemToppings = item.toppings || [];
+        const toppingsPrice = itemToppings.reduce((total, toppingKey) => {
           const matched = this.resolveTopping(toppingKey, dbToppings);
           return total + (matched?.price ?? TOPPING_PRICE[toppingKey] ?? 0);
         }, 0);
         const price = product.price + SIZE_EXTRA_PRICE[item.size] + toppingsPrice;
 
-        const resolvedToppingNames = item.toppings.map((t) => {
+        const resolvedToppingNames = itemToppings.map((t) => {
           const matched = this.resolveTopping(t, dbToppings);
           return matched ? matched.name : t;
         });
@@ -447,7 +448,7 @@ export class OrdersService {
         return {
           productId: item.productId,
           size: item.size,
-          toppings: item.toppings.length > 0 ? JSON.stringify(resolvedToppingNames) : null,
+          toppings: itemToppings.length > 0 ? JSON.stringify(resolvedToppingNames) : null,
           price,
           qty: item.quantity,
           lineTotal: price * item.quantity,
@@ -772,6 +773,30 @@ export class OrdersService {
 
     const execute = async (tx: Prisma.TransactionClient) => {
       await this.rollbackInventory(orderId, tx);
+
+      // Hoàn trả điểm thưởng đã dùng và thu hồi điểm đã tích nếu đơn bị hủy từ trạng thái PAID
+      if (order.userId && (tx as any).user?.findUnique && (tx as any).user?.update) {
+        let pointsToRefund = order.pointsUsed || 0;
+        let pointsToDeductEarned = 0;
+        if (order.status === OrderStatus.PAID) {
+          pointsToDeductEarned = Math.floor(order.total / LOYALTY_EARN_RATE);
+        }
+        const netPointsChange = pointsToRefund - pointsToDeductEarned;
+        if (netPointsChange !== 0) {
+          const user = await (tx as any).user.findUnique({
+            where: { id: order.userId },
+            select: { loyaltyPoints: true },
+          });
+          if (user) {
+            await (tx as any).user.update({
+              where: { id: order.userId },
+              data: {
+                loyaltyPoints: Math.max(0, user.loyaltyPoints + netPointsChange),
+              },
+            });
+          }
+        }
+      }
 
       const updatedOrder = await tx.order.update({
         where: { id: orderId },
