@@ -13,7 +13,9 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Roles } from '../common/decorators/roles.decorator.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
+import { RolesGuard } from '../common/guards/roles.guard.js';
 import { CreateOrderDto } from '../dto/orders/create-order.dto.js';
 import { UpdateOrderStatusDto } from '../dto/orders/update-order-status.dto.js';
 import { OrdersService } from '../services/orders.service.js';
@@ -89,10 +91,11 @@ export class OrdersController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('BARISTA')
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Lấy toàn bộ đơn hàng kèm món (Dành cho Barista / Nhân viên)',
+    summary: 'Lấy toàn bộ đơn hàng kèm món (Chỉ dành cho Barista)',
   })
   findAll() {
     return this.ordersService.findAll();
@@ -119,6 +122,9 @@ export class OrdersController {
   }
 
   @Patch(':id/status')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('BARISTA')
+  @ApiBearerAuth()
   @UsePipes(
     new ValidationPipe({
       transform: true,
@@ -127,7 +133,7 @@ export class OrdersController {
     })
   )
   @ApiOperation({
-    summary: 'Cập nhật trạng thái đơn hàng theo State Machine (PATCH /orders/:id/status)',
+    summary: 'Cập nhật trạng thái đơn hàng theo State Machine - Chỉ dành cho Barista, chặn chuyển PENDING -> PAID thủ công (PATCH /orders/:id/status)',
   })
   updateStatus(
     @Param('id', ParseIntPipe) id: number,

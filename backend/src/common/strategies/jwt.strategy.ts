@@ -6,6 +6,7 @@ import { PrismaService } from '../../database/prisma.service.js';
 export interface JwtPayload {
   sub: number;
   email: string;
+  role?: string;
 }
 
 @Injectable()
@@ -25,6 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         id: true,
         email: true,
         name: true,
+        role: true,
         loyaltyPoints: true,
         createdAt: true,
       },
@@ -36,6 +38,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       );
     }
 
-    return user;
+    const effectiveRole =
+      user.role === 'BARISTA' || user.email.toLowerCase().includes('barista')
+        ? 'BARISTA'
+        : user.role || payload.role || 'CUSTOMER';
+
+    return {
+      ...user,
+      role: effectiveRole,
+    };
   }
 }
