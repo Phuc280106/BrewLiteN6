@@ -151,14 +151,19 @@ export default function PaymentModal({
 
   if (!isOpen) return null;
 
-  const discountAmount = appliedPromotion ? appliedPromotion.discount : 0;
+  const MIN_ORDER_PAYABLE = 5000;
+  const maxCouponDiscount =
+    subtotal >= MIN_ORDER_PAYABLE ? subtotal - MIN_ORDER_PAYABLE : 0;
+  const discountAmount = appliedPromotion
+    ? Math.min(appliedPromotion.discount, maxCouponDiscount)
+    : 0;
   const subtotalAfterCoupon = Math.max(0, subtotal - discountAmount);
 
-  // Tỉ lệ: 1 điểm = 1.000 VNĐ
+  // Tỉ lệ: 1 điểm = 1.000 VNĐ (giữ lại tối thiểu 5.000đ để thanh toán qua VNPay)
   const userPoints = user?.loyaltyPoints || 0;
   const maxPointsCanUse = Math.min(
     userPoints,
-    Math.floor(subtotalAfterCoupon / 1000)
+    Math.max(0, Math.floor((subtotalAfterCoupon - MIN_ORDER_PAYABLE) / 1000))
   );
 
   const parsedPoints = parseInt(pointsInput, 10);

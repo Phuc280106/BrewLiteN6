@@ -51,6 +51,12 @@ export class PaymentsController {
       );
     }
 
+    if (order.total < 5000) {
+      throw new BadRequestException(
+        'Số tiền thanh toán qua VNPay tối thiểu phải từ 5.000đ trở lên'
+      );
+    }
+
     const clientIp =
       (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
       req.socket.remoteAddress ||

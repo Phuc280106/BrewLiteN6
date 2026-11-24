@@ -3,12 +3,12 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../database/prisma.service.js';
 import { OrderStatus } from '../common/state-machine/order-state-machine.js';
 
-/** Thời gian tối đa (phút) kể từ khi tạo đơn mà chưa được thanh toán (10 phút). */
-export const PAYMENT_TTL_MINUTES = 10;
-export const PAYMENT_TTL_SECONDS = PAYMENT_TTL_MINUTES * 60;
+/** Thời gian tối đa (giây) kể từ khi tạo đơn mà chưa được thanh toán (30 giây để demo nhanh). */
+export const PAYMENT_TTL_SECONDS = 30;
+export const PAYMENT_TTL_MINUTES = PAYMENT_TTL_SECONDS / 60;
 
 /**
- * Chạy mỗi phút, tìm các đơn hàng PENDING / PAYMENT_FAILED quá TTL và:
+ * Chạy mỗi 5 giây, tìm các đơn hàng PENDING / PAYMENT_FAILED quá TTL (30s) và:
  *   1. Hoàn trả tồn kho (rollback stock) cho từng sản phẩm trong đơn.
  *   2. Chuyển trạng thái đơn sang CANCELLED.
  *
@@ -21,9 +21,9 @@ export class OrderExpiryService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron('*/5 * * * * *')
   async expireStaleOrders(): Promise<void> {
-    const cutoff = new Date(Date.now() - PAYMENT_TTL_MINUTES * 60 * 1000);
+    const cutoff = new Date(Date.now() - PAYMENT_TTL_SECONDS * 1000);
 
     // Lấy các đơn hết hạn kèm items (để biết cần hoàn bao nhiêu stock về)
     const staleOrders = await this.prisma.order.findMany({
