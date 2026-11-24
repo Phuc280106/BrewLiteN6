@@ -28,6 +28,9 @@ export const LOYALTY_POINT_VALUE = 1000;
 /** Tỉ lệ tích lũy điểm thưởng: mỗi 10.000 VNĐ = 1 điểm */
 export const LOYALTY_EARN_RATE = 10000;
 
+/** Số tiền thanh toán tối thiểu của một đơn hàng (đáp ứng cổng VNPay >= 5.000đ) */
+export const MIN_ORDER_PAYABLE = 5000;
+
 /**
  * Được ném bên trong transaction khi một sản phẩm đã bị giao dịch khác sửa
  * (version/stock thay đổi) giữa lúc đọc và lúc ghi. Ném lỗi sẽ rollback toàn
@@ -498,7 +501,9 @@ export class OrdersService {
           discount = promotion.discountAmount;
         }
 
-        discount = Math.min(discount, subtotal);
+        const maxCouponDiscount =
+          subtotal >= MIN_ORDER_PAYABLE ? subtotal - MIN_ORDER_PAYABLE : 0;
+        discount = Math.min(discount, maxCouponDiscount);
         appliedCouponCode = promotion.code;
       }
 
@@ -526,12 +531,13 @@ export class OrdersService {
           );
         }
 
-        const remainingAfterCoupon = Math.max(0, subtotal - discount);
+        // Giữ lại tối thiểu 5.000đ để đơn hàng luôn hợp lệ khi thanh toán qua VNPay
+        const remainingAfterCoupon = Math.max(0, subtotal - discount - MIN_ORDER_PAYABLE);
         const requestedDiscount = Math.floor(input.pointsUsed) * LOYALTY_POINT_VALUE;
 
         if (requestedDiscount > remainingAfterCoupon) {
-          pointDiscount = remainingAfterCoupon;
-          pointsUsed = Math.ceil(pointDiscount / LOYALTY_POINT_VALUE);
+          pointsUsed = Math.floor(remainingAfterCoupon / LOYALTY_POINT_VALUE);
+          pointDiscount = pointsUsed * LOYALTY_POINT_VALUE;
         } else {
           pointDiscount = requestedDiscount;
           pointsUsed = Math.floor(input.pointsUsed);
@@ -540,6 +546,12 @@ export class OrdersService {
 
       const totalDiscount = discount + pointDiscount;
       const total = Math.max(0, subtotal - totalDiscount);
+
+      if (total < MIN_ORDER_PAYABLE) {
+        throw new BadRequestException(
+          `Tổng tiền thanh toán tối thiểu của đơn hàng là ${MIN_ORDER_PAYABLE.toLocaleString('vi-VN')}đ`
+        );
+      }
 
       const order = await transaction.order.create({
         data: {

@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: brewlite-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: brewlite
+    ports:
+      # Dùng 5433 trên máy host để tránh đụng cổng 5432 của project khác (asm2)
+      - "5433:5432"
+    volumes:
+      - brewlite_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d brewlite"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: brewlite-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgresql://postgres:123456@postgres:5432/brewlite
+      VNP_TMN_CODE: OCRC6EBD
+      VNP_HASH_SECRET: QLKXCLVFTWDSPLVWZHJQWSMTEXNNYTDT
+      VNP_URL: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+      VNP_RETURN_URL: http://localhost:3000/payment/vnpay-return
+    ports:
+      - "3001:3001"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3001
+    container_name: brewlite-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    ports:
+      - "3000:3000"
+
+volumes:
+  brewlite_pgdata:

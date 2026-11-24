@@ -398,14 +398,14 @@ export default function BaristaBoard() {
 
             {/* Trống đơn */}
             {!isLoading && filteredOrders.length === 0 && (
-              <div className="bg-white rounded-3xl p-10 text-center border border-stone-200 shadow-sm my-6">
-                <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3">
+              <div className="bg-white rounded-3xl p-10 text-center flex flex-col items-center justify-center border border-stone-200 shadow-sm my-6">
+                <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3">
                   <Icon name="cup" size={32} />
                 </div>
                 <h3 className="text-lg font-bold text-stone-900">
                   Không có đơn hàng nào ở mục này
                 </h3>
-                <p className="text-stone-500 text-xs sm:text-sm mt-1 max-w-sm mx-auto">
+                <p className="text-stone-500 text-xs sm:text-sm mt-1 max-w-sm text-center">
                   Khi khách hàng đặt và thanh toán đơn hàng trực tuyến, đơn sẽ tự động hiển thị ở trạng thái PAID tại đây để Barista pha chế.
                 </p>
               </div>
