@@ -85,6 +85,8 @@ export default function PaymentModal({
   const [appliedPromotion, setAppliedPromotion] =
     useState<ValidatePromotionResponse | null>(null);
   const [availablePromotions, setAvailablePromotions] = useState<Promotion[]>([]);
+  const [isLoadingPromotions, setIsLoadingPromotions] = useState(false);
+  const [promotionsError, setPromotionsError] = useState<string | null>(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [couponError, setCouponError] = useState<string | null>(null);
 
@@ -96,57 +98,38 @@ export default function PaymentModal({
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [pendingOrderId, setPendingOrderId] = useState<number | null>(null);
 
-  // Lấy danh sách mã khuyến mãi gợi ý khi mở modal
+  // Lấy danh sách mã khuyến mãi gợi ý từ Backend khi mở modal
   useEffect(() => {
     if (!isOpen) return;
 
+    let isCancelled = false;
+
     const fetchPromotions = async () => {
+      setIsLoadingPromotions(true);
+      setPromotionsError(null);
       try {
         const res = await api.get<Promotion[]>('/orders/promotions');
-        setAvailablePromotions(res.data);
-      } catch {
-        setAvailablePromotions([
-          {
-            id: 1,
-            code: 'BREW10',
-            description: 'Giảm 10% tổng đơn hàng (đơn tối thiểu 50.000đ)',
-            discountPercent: 10,
-            discountAmount: null,
-            minOrder: 50000,
-            isActive: true,
-          },
-          {
-            id: 2,
-            code: 'CHAOBAN',
-            description: 'Giảm ngay 20.000đ cho đơn từ 40.000đ',
-            discountPercent: null,
-            discountAmount: 20000,
-            minOrder: 40000,
-            isActive: true,
-          },
-          {
-            id: 3,
-            code: 'FREESHIP',
-            description: 'Hỗ trợ 15.000đ phí giao hàng cho đơn từ 60.000đ',
-            discountPercent: null,
-            discountAmount: 15000,
-            minOrder: 60000,
-            isActive: true,
-          },
-          {
-            id: 4,
-            code: 'VIP20',
-            description: 'Ưu đãi thành viên VIP: Giảm 20% cho đơn từ 100.000đ',
-            discountPercent: 20,
-            discountAmount: null,
-            minOrder: 100000,
-            isActive: true,
-          },
-        ]);
+        if (!isCancelled) {
+          setAvailablePromotions(Array.isArray(res.data) ? res.data : []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch promotions:', err);
+        if (!isCancelled) {
+          setAvailablePromotions([]);
+          setPromotionsError('Không thể tải danh sách mã khuyến mãi từ hệ thống.');
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingPromotions(false);
+        }
       }
     };
 
     void fetchPromotions();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -426,7 +409,7 @@ export default function PaymentModal({
                       void handleApplyCoupon();
                     }
                   }}
-                  placeholder="Nhập mã voucher (BREW10, CHAOBAN...)"
+                  placeholder="Nhập mã khuyến mãi..."
                   className="flex-1 px-3.5 py-2.5 text-xs rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono uppercase bg-stone-50"
                 />
                 <button
@@ -446,33 +429,45 @@ export default function PaymentModal({
               </p>
             )}
 
-            {/* Gợi ý mã khuyến mãi */}
-            {!appliedPromotion && availablePromotions.length > 0 && (
-              <div className="space-y-1.5 pt-1">
-                <span className="text-[11px] font-semibold text-stone-400">
-                  Mã khuyến mãi có thể dùng:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {availablePromotions.map((p) => {
-                    const isEligible = subtotal >= (p.minOrder || 0);
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => void handleApplyCoupon(p.code)}
-                        className={`text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
-                          isEligible
-                            ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
-                            : 'bg-stone-100 text-stone-400 border-stone-200 hover:bg-stone-200'
-                        }`}
-                        title={p.description || undefined}
-                      >
-                        {p.code}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+            {/* Gợi ý mã khuyến mãi từ Backend */}
+            {!appliedPromotion && (
+              <>
+                {isLoadingPromotions ? (
+                  <p className="text-[11px] text-stone-400 pt-1">
+                    Đang tải mã khuyến mãi...
+                  </p>
+                ) : promotionsError ? (
+                  <p className="text-[11px] text-amber-700 pt-1">
+                    {promotionsError}
+                  </p>
+                ) : availablePromotions.length > 0 ? (
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[11px] font-semibold text-stone-400">
+                      Mã khuyến mãi có thể dùng:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {availablePromotions.map((p) => {
+                        const isEligible = subtotal >= (p.minOrder || 0);
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => void handleApplyCoupon(p.code)}
+                            className={`text-[11px] font-mono font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                              isEligible
+                                ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
+                                : 'bg-stone-100 text-stone-400 border-stone-200 hover:bg-stone-200'
+                            }`}
+                            title={p.description || undefined}
+                          >
+                            {p.code}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </>
             )}
           </div>
 
