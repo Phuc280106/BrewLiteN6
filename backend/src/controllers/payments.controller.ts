@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Logger,
   Param,
   ParseIntPipe,
@@ -13,7 +14,7 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { InitiatePaymentDto } from '../dto/orders/initiate-payment.dto.js';
@@ -24,6 +25,10 @@ import { VnpayService } from '../services/vnpay.service.js';
 @Controller('payments')
 export class PaymentsController {
   private readonly logger = new Logger(PaymentsController.name);
+  private readonly initiateCache = new Map<
+    string,
+    { orderId: number; response: Record<string, unknown> }
+  >();
 
   constructor(
     private readonly ordersService: OrdersService,
@@ -39,9 +44,34 @@ export class PaymentsController {
   @ApiBearerAuth()
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   @ApiOperation({
-    summary: 'Khởi tạo phiên thanh toán VNPay Sandbox (Hỗ trợ mở thẳng tab theo bankCode & thanh toán lại)',
+    summary: 'Khởi tạo phiên thanh toán VNPay Sandbox (Hỗ trợ mở thẳng tab theo bankCode, thanh toán lại & Idempotency-Key)',
   })
-  async initiatePayment(@Body() body: InitiatePaymentDto, @Req() req: Request) {
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: false,
+    description: 'Khóa chống khởi tạo trùng phiên thanh toán khi gửi lặp request',
+  })
+  async initiatePayment(
+    @Body() body: InitiatePaymentDto,
+    @Req() req: Request,
+    @Headers('idempotency-key') idempotencyKey?: string
+  ) {
+    const normalizedKey = idempotencyKey?.trim();
+    if (normalizedKey) {
+      const cached = this.initiateCache.get(normalizedKey);
+      if (cached) {
+        if (cached.orderId !== body.orderId) {
+          throw new BadRequestException(
+            `Idempotency-Key "${normalizedKey}" đã được sử dụng cho đơn hàng #${cached.orderId}, không thể dùng cho đơn hàng #${body.orderId}`
+          );
+        }
+        return {
+          ...cached.response,
+          idempotent: true,
+        };
+      }
+    }
+
     const order = await this.ordersService.getOrderStatus(body.orderId);
 
     // Cho phép thanh toán khi đơn ở trạng thái PENDING hoặc PAYMENT_FAILED (thanh toán lại)
@@ -70,13 +100,25 @@ export class PaymentsController {
       bankCode: body.bankCode,
     });
 
-    return {
+    const responsePayload = {
       orderId: order.orderId,
       orderCode: order.orderCode,
       total: order.total,
       method: body.method,
       bankCode: body.bankCode || null,
       paymentUrl: vnpayUrl,
+    };
+
+    if (normalizedKey) {
+      this.initiateCache.set(normalizedKey, {
+        orderId: order.orderId,
+        response: responsePayload,
+      });
+    }
+
+    return {
+      ...responsePayload,
+      ...(normalizedKey ? { idempotent: false } : {}),
     };
   }
 
