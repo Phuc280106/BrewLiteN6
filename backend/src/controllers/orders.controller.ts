@@ -153,7 +153,7 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Hủy đơn hàng (Áp dụng khi đơn ở PENDING, PAYMENT_FAILED hoặc PAID)',
+    summary: 'Khách hàng tự hủy đơn hàng (Chỉ áp dụng khi đơn ở PENDING hoặc PAYMENT_FAILED; đơn PAID chỉ do Barista xử lý)',
   })
   cancelOrder(
     @Param('id', ParseIntPipe) id: number,
