@@ -841,6 +841,12 @@ export class OrdersService {
       throw new ForbiddenException('Bạn không có quyền hủy đơn hàng này');
     }
 
+    if (userId && order.status === OrderStatus.PAID) {
+      throw new ForbiddenException(
+        'Đơn hàng đã thanh toán (PAID), khách hàng không thể tự hủy. Vui lòng liên hệ Barista/Quản lý để được hỗ trợ.'
+      );
+    }
+
     assertTransition(order.status as OrderStatus, OrderStatus.CANCELLED);
 
     const execute = async (tx: Prisma.TransactionClient) => {
