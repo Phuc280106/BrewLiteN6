@@ -76,7 +76,7 @@ export default function OrderHistoryPage() {
     }
     setCancellingOrderId(orderId);
     try {
-      await api.patch(`/orders/${orderId}/status`, { status: 'CANCELLED' });
+      await api.post(`/orders/${orderId}/cancel`);
       setOrders((prev) =>
         prev.map((o) => (o.id === orderId ? { ...o, status: 'CANCELLED' } : o))
       );

@@ -844,6 +844,12 @@ export class OrdersService {
   }
 
   async updateStatus(orderId: number, newStatus: OrderStatus | string) {
+    if (newStatus === OrderStatus.PAID) {
+      throw new BadRequestException(
+        'Không thể chuyển trạng thái sang PAID thủ công. Đơn hàng chỉ chuyển sang PAID thông qua cổng thanh toán.'
+      );
+    }
+
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
     });

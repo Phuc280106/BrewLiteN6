@@ -40,14 +40,21 @@ export class AuthService {
         id: true,
         email: true,
         name: true,
+        role: true,
         loyaltyPoints: true,
         createdAt: true,
       },
     });
 
+    const effectiveRole =
+      user.role === 'BARISTA' || user.email.toLowerCase().includes('barista')
+        ? 'BARISTA'
+        : user.role || 'CUSTOMER';
+
     const accessToken = this.jwtService.sign({
       sub: user.id,
       email: user.email,
+      role: effectiveRole,
     });
 
     return {
@@ -55,11 +62,7 @@ export class AuthService {
       accessToken,
       user: {
         ...user,
-        role:
-          (user as any).role === 'BARISTA' ||
-          user.email.toLowerCase().includes('barista')
-            ? 'BARISTA'
-            : (user as any).role || 'CUSTOMER',
+        role: effectiveRole,
       },
     };
   }
@@ -80,9 +83,15 @@ export class AuthService {
       throw new UnauthorizedException('Email hoặc mật khẩu không chính xác');
     }
 
+    const effectiveRole =
+      user.role === 'BARISTA' || user.email.toLowerCase().includes('barista')
+        ? 'BARISTA'
+        : user.role || 'CUSTOMER';
+
     const accessToken = this.jwtService.sign({
       sub: user.id,
       email: user.email,
+      role: effectiveRole,
     });
 
     return {
@@ -92,11 +101,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
-        role:
-          (user as any).role === 'BARISTA' ||
-          user.email.toLowerCase().includes('barista')
-            ? 'BARISTA'
-            : (user as any).role || 'CUSTOMER',
+        role: effectiveRole,
         loyaltyPoints: user.loyaltyPoints,
       },
     };
