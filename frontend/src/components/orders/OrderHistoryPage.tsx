@@ -65,11 +65,11 @@ export default function OrderHistoryPage() {
     }
   };
 
-  // Xử lý hủy đơn hàng (áp dụng cho đơn PENDING hoặc PAID khi quán chưa pha chế)
+  // Xử lý hủy đơn hàng (chỉ áp dụng cho đơn chưa thanh toán PENDING hoặc PAYMENT_FAILED)
   const handleCancelOrder = async (orderId: number, orderCode?: string) => {
     if (
       !window.confirm(
-        `Bạn có chắc chắn muốn hủy đơn hàng ${orderCode || `#${orderId}`}? Đơn hàng sẽ được chuyển sang trạng thái ĐÃ HỦY và hoàn lại điểm thưởng (nếu có).`
+        `Bạn có chắc chắn muốn hủy đơn hàng ${orderCode || `#${orderId}`}? Đơn hàng sẽ được chuyển sang trạng thái ĐÃ HỦY.`
       )
     ) {
       return;
@@ -367,8 +367,8 @@ export default function OrderHistoryPage() {
                         {badge.label}
                       </span>
 
-                      {/* Nút hủy đơn khi đơn ở trạng thái PAID hoặc PENDING */}
-                      {(order.status === 'PAID' || order.status === 'PENDING') && (
+                      {/* Nút hủy đơn chỉ hiển thị khi đơn chưa thanh toán (PENDING hoặc PAYMENT_FAILED) */}
+                      {(order.status === 'PENDING' || order.status === 'PAYMENT_FAILED') && (
                         <button
                           type="button"
                           onClick={() => handleCancelOrder(order.id, order.orderCode)}
