@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Headers,
   Logger,
@@ -34,6 +35,17 @@ export class PaymentsController {
     private readonly ordersService: OrdersService,
     private readonly vnpayService: VnpayService
   ) {}
+
+  private assertOrderOwnership(orderUserId: number | null, req: Request) {
+    const currentUser = (req as Request & { user?: { id: number; role?: string } }).user;
+    if (
+      orderUserId !== null &&
+      currentUser?.role !== 'BARISTA' &&
+      currentUser?.id !== orderUserId
+    ) {
+      throw new ForbiddenException('Bạn không có quyền thao tác trên đơn hàng của người khác');
+    }
+  }
 
   /**
    * 1. Khách hàng bấm thanh toán -> Sinh URL Cổng thanh toán VNPay Sandbox
@@ -73,6 +85,7 @@ export class PaymentsController {
     }
 
     const order = await this.ordersService.getOrderStatus(body.orderId);
+    this.assertOrderOwnership(order.userId, req);
 
     // Cho phép thanh toán khi đơn ở trạng thái PENDING hoặc PAYMENT_FAILED (thanh toán lại)
     if (order.status !== 'PENDING' && order.status !== 'PAYMENT_FAILED') {
@@ -200,8 +213,15 @@ export class PaymentsController {
    * 3. Kiểm tra trạng thái đơn hàng (Dành cho Frontend Polling realtime)
    */
   @Get('status/:orderId')
-  @ApiOperation({ summary: 'Kiểm tra trạng thái đơn hàng (Polling realtime)' })
-  async checkStatus(@Param('orderId', ParseIntPipe) orderId: number) {
-    return this.ordersService.getOrderStatus(orderId);
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Kiểm tra trạng thái đơn hàng (Yêu cầu đăng nhập & đúng chủ đơn)' })
+  async checkStatus(
+    @Param('orderId', ParseIntPipe) orderId: number,
+    @Req() req: Request
+  ) {
+    const order = await this.ordersService.getOrderStatus(orderId);
+    this.assertOrderOwnership(order.userId, req);
+    return order;
   }
 }

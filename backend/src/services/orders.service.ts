@@ -1218,6 +1218,7 @@ export class OrdersService {
       where: { id: orderId },
       select: {
         id: true,
+        userId: true,
         status: true,
         total: true,
         discount: true,
@@ -1234,6 +1235,7 @@ export class OrdersService {
 
     return {
       orderId: order.id,
+      userId: order.userId,
       orderCode: `BL-${String(order.id).padStart(6, '0')}`,
       status: order.status,
       total: order.total,
