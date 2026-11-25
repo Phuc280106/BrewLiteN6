@@ -32,10 +32,11 @@ model User {
 }
 
 model Order {
-  id            Int         @id @default(autoincrement())
-  userId        Int?
-  user          User?       @relation(fields: [userId], references: [id])
-  total         Float
+  id             Int         @id @default(autoincrement())
+  userId         Int?
+  user           User?       @relation(fields: [userId], references: [id])
+  idempotencyKey String?     @unique // Chống tạo trùng đơn hàng khi gửi lặp request
+  total          Float
   discount      Float       @default(0) // Số tiền giảm giá
   couponCode    String?     // Mã khuyến mãi đã áp dụng
   pointsUsed    Int         @default(0) // Số điểm thưởng thành viên đã dùng

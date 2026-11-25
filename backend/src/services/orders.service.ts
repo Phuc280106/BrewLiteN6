@@ -81,11 +81,44 @@ export class OrdersService {
    * mới nhất và thử lại. Nếu lúc đó hết hàng thật -> 400, nếu tranh chấp quá
    * nhiều -> 409.
    */
-  async create(input: CreateOrderDto, userId?: number) {
+  async create(input: CreateOrderDto, userId?: number, idempotencyKey?: string) {
+    const normalizedKey = idempotencyKey?.trim() || undefined;
+
     for (let attempt = 1; attempt <= MAX_ORDER_ATTEMPTS; attempt++) {
       try {
-        return await this.createOnce(input, userId);
+        return await this.createOnce(input, userId, normalizedKey);
       } catch (error) {
+        // Nếu 2 request cùng Idempotency-Key chạy song song và 1 request vừa kịp insert trước (P2002)
+        if (
+          normalizedKey &&
+          typeof error === 'object' &&
+          error !== null &&
+          (error as { code?: string }).code === 'P2002'
+        ) {
+          const existing = await this.prisma.order.findUnique({
+            where: { idempotencyKey: normalizedKey },
+          });
+          if (existing) {
+            if (userId && existing.userId && existing.userId !== userId) {
+              throw new BadRequestException(
+                `Idempotency-Key "${normalizedKey}" đã được sử dụng cho tài khoản khác`
+              );
+            }
+            return {
+              orderId: existing.id,
+              orderCode: `BL-${String(existing.id).padStart(6, '0')}`,
+              total: existing.total,
+              discount: existing.discount,
+              couponCode: existing.couponCode,
+              pointsUsed: existing.pointsUsed,
+              pointDiscount: existing.pointDiscount,
+              status: existing.status,
+              createdAt: existing.createdAt,
+              idempotent: true,
+            };
+          }
+        }
+
         if (!isRetryable(error)) throw error;
 
         if (attempt < MAX_ORDER_ATTEMPTS) {
@@ -269,8 +302,34 @@ export class OrdersService {
   return null;
 }
 
-  private createOnce(input: CreateOrderDto, userId?: number) {
+  private createOnce(input: CreateOrderDto, userId?: number, idempotencyKey?: string) {
     return this.prisma.$transaction(async (transaction) => {
+      // 0. Kiểm tra Idempotency-Key để chống tạo 2 đơn khi client gửi lặp request
+      if (idempotencyKey && (transaction as any).order?.findUnique) {
+        const existingOrder = await transaction.order.findUnique({
+          where: { idempotencyKey },
+        });
+        if (existingOrder) {
+          if (userId && existingOrder.userId && existingOrder.userId !== userId) {
+            throw new BadRequestException(
+              `Idempotency-Key "${idempotencyKey}" đã được sử dụng cho tài khoản khác`
+            );
+          }
+          return {
+            orderId: existingOrder.id,
+            orderCode: `BL-${String(existingOrder.id).padStart(6, '0')}`,
+            total: existingOrder.total,
+            discount: existingOrder.discount,
+            couponCode: existingOrder.couponCode,
+            pointsUsed: existingOrder.pointsUsed,
+            pointDiscount: existingOrder.pointDiscount,
+            status: existingOrder.status,
+            createdAt: existingOrder.createdAt,
+            idempotent: true,
+          };
+        }
+      }
+
       const productIds = [...new Set(input.items.map((item) => item.productId))];
       const products = await transaction.product.findMany({
         where: { id: { in: productIds } },
@@ -556,6 +615,7 @@ export class OrdersService {
       const order = await transaction.order.create({
         data: {
           userId: userId ?? null,
+          ...(idempotencyKey ? { idempotencyKey } : {}),
           total,
           discount,
           couponCode: appliedCouponCode,

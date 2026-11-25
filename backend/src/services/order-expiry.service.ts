@@ -4,7 +4,7 @@ import { PrismaService } from '../database/prisma.service.js';
 import { OrderStatus } from '../common/state-machine/order-state-machine.js';
 
 /** Thời gian tối đa (giây) kể từ khi tạo đơn mà chưa được thanh toán (30 giây để demo nhanh). */
-export const PAYMENT_TTL_SECONDS = 30;
+export const PAYMENT_TTL_SECONDS = 600;
 export const PAYMENT_TTL_MINUTES = PAYMENT_TTL_SECONDS / 60;
 
 /**
@@ -21,7 +21,7 @@ export class OrderExpiryService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  @Cron('*/5 * * * * *')
+  @Cron('*/60 * * * * *')
   async expireStaleOrders(): Promise<void> {
     const cutoff = new Date(Date.now() - PAYMENT_TTL_SECONDS * 1000);
 

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   ParseIntPipe,
   Patch,
@@ -12,7 +13,7 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiHeader, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
@@ -112,13 +113,19 @@ export class OrdersController {
     })
   )
   @ApiOperation({
-    summary: 'Tạo đơn hàng ở trạng thái PENDING kèm mã khuyến mãi và điểm thưởng (Yêu cầu đăng nhập JWT)',
+    summary: 'Tạo đơn hàng ở trạng thái PENDING kèm mã khuyến mãi, điểm thưởng và hỗ trợ Idempotency-Key',
+  })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    required: false,
+    description: 'Khóa chống tạo trùng đơn hàng khi gửi lặp request',
   })
   create(
     @Body() body: CreateOrderDto,
-    @Request() req: { user: { id: number } }
+    @Request() req: { user: { id: number } },
+    @Headers('idempotency-key') idempotencyKey?: string
   ) {
-    return this.ordersService.create(body, req.user?.id);
+    return this.ordersService.create(body, req.user?.id, idempotencyKey);
   }
 
   @Patch(':id/status')
