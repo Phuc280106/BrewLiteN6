@@ -157,7 +157,7 @@ export default function ProductOptions({
 
       {quantity >= stock && stock > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-2.5 text-xs text-amber-800 flex items-center gap-2 animate-fadeIn">
-          <span className="text-sm">⚠️</span>
+          <span className="text-sm"></span>
           <span>
             Đã đạt số lượng tối đa có thể pha chế dựa theo tồn kho nguyên liệu hiện tại (tối đa {stock} ly). Nút tăng đã được vô hiệu hóa.
           </span>
@@ -166,7 +166,7 @@ export default function ProductOptions({
 
       {stock <= 0 && (
         <div className="bg-rose-50 border border-rose-200 rounded-xl px-3.5 py-2.5 text-xs text-rose-700 flex items-center gap-2 animate-fadeIn">
-          <span className="text-sm">⚠️</span>
+          <span className="text-sm"></span>
           <span>
             Kho hiện không còn đủ nguyên liệu để pha chế size này. Vui lòng chọn size khác hoặc đồ uống khác.
           </span>

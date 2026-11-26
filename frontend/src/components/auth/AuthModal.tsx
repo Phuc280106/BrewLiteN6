@@ -164,7 +164,7 @@ export default function AuthModal() {
         {/* Notice from Cart or system */}
         {notice && (
           <div className="mt-3.5 p-3 rounded-2xl bg-amber-50/80 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center gap-2">
-            <span>☕</span>
+            
             <span>{notice}</span>
           </div>
         )}
@@ -172,7 +172,7 @@ export default function AuthModal() {
         {/* Error message */}
         {errorMessage && (
           <div className="mt-3.5 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2 animate-fadeIn">
-            <span>⚠️</span>
+            
             <span>{errorMessage}</span>
           </div>
         )}

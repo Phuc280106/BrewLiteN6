@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -19,7 +19,6 @@ export interface VnpayPaymentOption {
   tag: string;
   tagColor: string;
   desc: string;
-  icon: string;
 }
 
 export const VNPAY_PAYMENT_OPTIONS: VnpayPaymentOption[] = [
@@ -30,16 +29,6 @@ export const VNPAY_PAYMENT_OPTIONS: VnpayPaymentOption[] = [
     tag: 'Sandbox',
     tagColor: 'bg-blue-600 text-white',
     desc: 'Tự chọn phương thức tại Cổng thanh toán VNPay',
-    icon: '🏦',
-  },
-  {
-    id: 'VNPAY_QR',
-    bankCode: 'VNPAYQR',
-    name: 'VNPAY-QR',
-    tag: 'App Bank',
-    tagColor: 'bg-rose-600 text-white',
-    desc: 'Quét mã QR từ hơn 40 ứng dụng ngân hàng & ví điện tử',
-    icon: '📱',
   },
   {
     id: 'VNPAY_ATM',
@@ -48,7 +37,6 @@ export const VNPAY_PAYMENT_OPTIONS: VnpayPaymentOption[] = [
     tag: 'Napas',
     tagColor: 'bg-emerald-600 text-white',
     desc: 'Tài khoản & Thẻ ATM các ngân hàng nội địa (NCB, Vietcombank...)',
-    icon: '🏧',
   },
   {
     id: 'VNPAY_INT',
@@ -57,7 +45,6 @@ export const VNPAY_PAYMENT_OPTIONS: VnpayPaymentOption[] = [
     tag: 'Visa/Master',
     tagColor: 'bg-purple-600 text-white',
     desc: 'Thẻ thanh toán quốc tế Visa, MasterCard, JCB',
-    icon: '💳',
   },
 ];
 
@@ -97,6 +84,18 @@ export default function PaymentModal({
   const [isInitiating, setIsInitiating] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [pendingOrderId, setPendingOrderId] = useState<number | null>(null);
+  const orderIdempotencyKeyRef = useRef<string>('');
+
+  const createIdempotencyKey = () =>
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `idem-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+  useEffect(() => {
+    if (isOpen) {
+      orderIdempotencyKeyRef.current = createIdempotencyKey();
+    }
+  }, [isOpen, cart, appliedPromotion?.code, pointsInput]);
 
   // Lấy danh sách mã khuyến mãi gợi ý từ Backend khi mở modal
   useEffect(() => {
@@ -218,20 +217,29 @@ export default function PaymentModal({
     let activeOrderId = pendingOrderId;
 
     try {
-      // 1. Tạo đơn hàng PENDING nếu chưa có
+      // 1. Tạo đơn hàng PENDING nếu chưa có (kèm Header Idempotency-Key chống tạo trùng)
       if (!activeOrderId) {
-        const orderRes = await api.post<CreateOrderResponse>('/orders', {
-          items: cart.map(({ productId, size, toppings, quantity }) => ({
-            productId,
-            size,
-            toppings: (toppings || []).filter((t) =>
-              ['pearl', 'cheese', 'peach_jelly'].includes(t)
-            ),
-            quantity,
-          })),
-          couponCode: appliedPromotion ? appliedPromotion.code : undefined,
-          pointsUsed: pointsUsed > 0 ? pointsUsed : undefined,
-        });
+        if (!orderIdempotencyKeyRef.current) {
+          orderIdempotencyKeyRef.current = createIdempotencyKey();
+        }
+        const orderRes = await api.post<CreateOrderResponse>(
+          '/orders',
+          {
+            items: cart.map(({ productId, size, toppings, quantity }) => ({
+              productId,
+              size,
+              toppings: (toppings || []).filter((t) => Boolean(t && String(t).trim())),
+              quantity,
+            })),
+            couponCode: appliedPromotion ? appliedPromotion.code : undefined,
+            pointsUsed: pointsUsed > 0 ? pointsUsed : undefined,
+          },
+          {
+            headers: {
+              'Idempotency-Key': orderIdempotencyKeyRef.current,
+            },
+          }
+        );
 
         activeOrderId = orderRes.data.orderId;
         setPendingOrderId(activeOrderId);
@@ -244,13 +252,18 @@ export default function PaymentModal({
         VNPAY_PAYMENT_OPTIONS.find((opt) => opt.id === selectedOptionId) ||
         VNPAY_PAYMENT_OPTIONS[0];
 
-      // 2. Khởi tạo phiên thanh toán VNPay Sandbox (kèm mã tab bankCode nếu có)
+      // 2. Khởi tạo phiên thanh toán VNPay Sandbox (kèm Header Idempotency-Key)
       const initRes = await api.post<InitiatePaymentResponse>(
         '/payments/initiate',
         {
           orderId: activeOrderId,
           method: 'VNPAY',
           bankCode: selectedOpt.bankCode,
+        },
+        {
+          headers: {
+            'Idempotency-Key': `${orderIdempotencyKeyRef.current || activeOrderId}-${selectedOpt.id}`,
+          },
         }
       );
 
@@ -310,7 +323,7 @@ export default function PaymentModal({
           {/* Tiêu đề Modal */}
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 mb-2">
-              <span>🏦 Cổng VNPay Sandbox</span>
+              <span>Cổng VNPay Sandbox</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-extrabold text-stone-900">
               Thanh toán đơn hàng
@@ -320,13 +333,13 @@ export default function PaymentModal({
             </p>
           </div>
 
-          {/* Chọn 1 trong 4 hình thức thanh toán của VNPay */}
+          {/* Chọn 1 trong 3 hình thức thanh toán của VNPay */}
           <div className="space-y-2.5">
             <label className="text-xs font-bold uppercase tracking-wider text-stone-500">
               Chọn phương thức thanh toán
             </label>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               {VNPAY_PAYMENT_OPTIONS.map((opt) => {
                 const isSelected = selectedOptionId === opt.id;
                 return (
@@ -334,16 +347,15 @@ export default function PaymentModal({
                     key={opt.id}
                     type="button"
                     onClick={() => setSelectedOptionId(opt.id)}
-                    className={`p-3 rounded-2xl border-2 text-left transition-all flex items-start gap-2.5 relative cursor-pointer ${
+                    className={`p-3 rounded-2xl border-2 text-left transition-all flex items-start gap-2 relative cursor-pointer ${
                       isSelected
                         ? 'border-blue-600 bg-blue-50/70 shadow-sm ring-2 ring-blue-500/20'
                         : 'border-stone-200 hover:border-stone-300 bg-white'
                     }`}
                   >
-                    <span className="text-2xl flex-shrink-0 mt-0.5">{opt.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-stone-900 truncate">
+                    <div className="flex-1 min-w-0 pr-3">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-xs font-bold text-stone-900">
                           {opt.name}
                         </span>
                         <span
@@ -352,7 +364,7 @@ export default function PaymentModal({
                           {opt.tag}
                         </span>
                       </div>
-                      <span className="text-[10px] text-stone-500 line-clamp-2 mt-0.5 leading-snug">
+                      <span className="text-[10px] text-stone-500 line-clamp-2 mt-1 leading-snug block">
                         {opt.desc}
                       </span>
                     </div>

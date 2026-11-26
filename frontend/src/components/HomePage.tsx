@@ -35,7 +35,7 @@ export default function HomePage() {
         <aside className="w-full bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-white shadow-md">
           <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-3 text-center sm:text-left">
-              <span className="text-2xl">☕</span>
+              <span className="text-2xl"></span>
               <div>
                 <p className="font-extrabold text-sm sm:text-base leading-tight">
                   Tài khoản Barista: {user?.name || user?.email}
