@@ -238,7 +238,7 @@ function VnpayReturnContent() {
                       <span>Đang kết nối lại VNPay...</span>
                     </>
                   ) : (
-                    <span>🔄 Thử thanh toán lại qua VNPay</span>
+                    <span>Thử thanh toán lại qua VNPay</span>
                   )}
                 </button>
               )}

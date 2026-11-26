@@ -38,7 +38,7 @@ export default function Header() {
   const navItems = [
     { label: 'Thực đơn', view: 'menu' as const },
     { label: 'Lịch sử đơn', view: 'orders' as const },
-    ...(isBarista ? [{ label: '☕ Kênh Barista', view: 'barista' as const }] : []),
+    ...(isBarista ? [{ label: 'Kênh Barista', view: 'barista' as const }] : []),
   ];
 
   return (
@@ -210,7 +210,7 @@ export default function Header() {
                         : 'bg-stone-100 text-stone-600 border border-stone-200'
                     }`}
                   >
-                    {isBarista ? '☕ Barista' : 'Khách hàng'}
+                    {isBarista ? 'Barista' : 'Khách hàng'}
                   </span>
                 </div>
                 <p className="text-stone-500 text-xs mt-0.5">{user?.email}</p>
@@ -242,7 +242,7 @@ export default function Header() {
                       }}
                       className="w-full py-2.5 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs sm:text-sm transition-colors flex items-center justify-between shadow-sm cursor-pointer"
                     >
-                      <span>☕ Vào kênh làm việc Barista</span>
+                      <span>Vào kênh làm việc Barista</span>
                       <Icon name="arrow" size={16} />
                     </button>
                   )}

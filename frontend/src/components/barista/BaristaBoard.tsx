@@ -198,7 +198,7 @@ export default function BaristaBoard() {
               : 'bg-rose-900 text-rose-100 border-rose-700'
           }`}
         >
-          <span>{feedbackMsg.type === 'success' ? '✓' : '⚠️'}</span>
+          <span>{feedbackMsg.type === 'success' ? '✓' : ''}</span>
           <span>{feedbackMsg.text}</span>
         </div>
       )}
@@ -208,7 +208,7 @@ export default function BaristaBoard() {
         {!user && !isLoading && (
           <div className="bg-white rounded-3xl p-8 sm:p-12 text-center border border-stone-200 shadow-md my-8 max-w-lg mx-auto">
             <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-4 border border-amber-200">
-              <span className="text-3xl">🔒</span>
+              <span className="text-3xl"></span>
             </div>
             <h2 className="text-2xl font-black text-stone-900">
               Yêu cầu quyền Barista
@@ -217,7 +217,7 @@ export default function BaristaBoard() {
               Màn hình KDS tiếp nhận và pha chế đơn hàng chỉ dành cho nhân viên Barista của BrewLite. Vui lòng đăng nhập với tài khoản nhân viên.
             </p>
             <div className="mt-4 p-3 rounded-2xl bg-stone-50 border border-stone-200 text-xs text-stone-600">
-              💡 <strong>Tài khoản Barista mẫu:</strong> <code>barista@brewlite.vn</code> · Mật khẩu: <code>barista123</code>
+              <strong>Tài khoản Barista mẫu:</strong> <code>barista@brewlite.vn</code> · Mật khẩu: <code>barista123</code>
             </div>
             <button
               onClick={() => openAuthModal('login')}
@@ -232,7 +232,7 @@ export default function BaristaBoard() {
         {user && !isBarista && !isLoading && (
           <div className="bg-white rounded-3xl p-8 sm:p-12 text-center border border-rose-200 shadow-md my-8 max-w-lg mx-auto">
             <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center mx-auto mb-4 border border-rose-200">
-              <span className="text-3xl">🚫</span>
+              <span className="text-3xl"></span>
             </div>
             <h2 className="text-2xl font-black text-stone-900">
               Quyền truy cập bị từ chối (403)
@@ -505,7 +505,7 @@ export default function BaristaBoard() {
                         {order.status === 'PENDING' && (
                           <div className="flex items-center gap-2">
                             <div className="flex-1 py-2 px-3 rounded-2xl bg-amber-50 border border-amber-200 text-center text-xs font-semibold text-amber-800">
-                              ⏳ Chờ thanh toán trực tuyến
+                               Chờ thanh toán trực tuyến
                             </div>
                             <button
                               onClick={() => {
@@ -530,7 +530,7 @@ export default function BaristaBoard() {
                               disabled={isUpdating}
                               className="flex-1 py-2.5 px-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shadow-md shadow-amber-500/20 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-98"
                             >
-                              <span>☕</span>
+                              
                               <span>{isUpdating ? 'Đang cập nhật...' : 'Bắt đầu pha chế (→ PREPARING)'}</span>
                             </button>
                             <button
@@ -556,7 +556,7 @@ export default function BaristaBoard() {
                             disabled={isUpdating}
                             className="w-full py-2.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-98"
                           >
-                            <span>🔔</span>
+                            
                             <span>{isUpdating ? 'Đang cập nhật...' : 'Pha xong - Sẵn sàng (→ READY)'}</span>
                           </button>
                         )}

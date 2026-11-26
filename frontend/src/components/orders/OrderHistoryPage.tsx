@@ -173,9 +173,9 @@ export default function OrderHistoryPage() {
 
   // Tiến trình: PAID -> PREPARING -> READY -> COMPLETED
   const inProgressSteps = [
-    { key: 'PAID', label: '1. Đã thanh toán (PAID)', icon: '💳' },
-    { key: 'PREPARING', label: '2. Đang pha chế (PREPARING)', icon: '☕' },
-    { key: 'READY', label: '3. Sẵn sàng nhận món (READY)', icon: '🔔' },
+    { key: 'PAID', label: '1. Đã thanh toán (PAID)', icon: '' },
+    { key: 'PREPARING', label: '2. Đang pha chế (PREPARING)', icon: '' },
+    { key: 'READY', label: '3. Sẵn sàng nhận món (READY)', icon: '' },
     { key: 'COMPLETED', label: '4. Đã hoàn tất (COMPLETED)', icon: '✓' },
   ];
 
@@ -385,7 +385,7 @@ export default function OrderHistoryPage() {
                   {(isPending || isPaymentFailed) && (
                     <div className="my-4 p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200 text-xs font-medium text-amber-900 flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        <span>{isPaymentFailed ? '⚠️' : '⏳'}</span>
+                        <span>{isPaymentFailed ? '' : ''}</span>
                         <span>
                           {isPaymentFailed
                             ? 'Thanh toán trước đó chưa thành công hoặc bị hủy. Bạn có thể bấm để thanh toán lại.'
@@ -404,7 +404,7 @@ export default function OrderHistoryPage() {
                             <span>Đang chuyển VNPay...</span>
                           </>
                         ) : (
-                          <span>💳 {isPaymentFailed ? 'Thanh toán lại qua VNPay' : 'Thanh toán VNPay ngay'}</span>
+                          <span>{isPaymentFailed ? 'Thanh toán lại qua VNPay' : 'Thanh toán VNPay ngay'}</span>
                         )}
                       </button>
                     </div>
