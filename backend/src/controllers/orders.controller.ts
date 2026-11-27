@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Headers,
   Param,
@@ -122,9 +123,14 @@ export class OrdersController {
   })
   create(
     @Body() body: CreateOrderDto,
-    @Request() req: { user: { id: number } },
+    @Request() req: { user: { id: number; role?: string } },
     @Headers('idempotency-key') idempotencyKey?: string
   ) {
+    if (req.user?.role === 'BARISTA' || req.user?.role === 'STAFF') {
+      throw new ForbiddenException(
+        'Tài khoản Barista chỉ quản lý pha chế, không thể đặt đơn hàng'
+      );
+    }
     return this.ordersService.create(body, req.user?.id, idempotencyKey);
   }
 

@@ -7,6 +7,7 @@ import ProductDetailModal from '../product/ProductDetailModal';
 import Icon from '../common/Icon';
 import ProductCard from './ProductCard';
 import { useCartStore } from '../cart/useCartStore';
+import { useAuthStore } from '../../store/useAuthStore';
 
 const CATEGORIES = [
   'All Drinks',
@@ -54,8 +55,14 @@ export default function MenuSection() {
   );
   const cart = useCartStore((state) => state.cart);
   const addToCart = useCartStore((state) => state.addToCart);
+  const user = useAuthStore((state) => state.user);
+  const isBarista =
+    user?.role === 'BARISTA' ||
+    user?.email?.toLowerCase().includes('barista') ||
+    user?.name?.toLowerCase().includes('barista');
 
   const handleProductSelect = (product: ProductItem) => {
+    if (isBarista) return;
     setSelectedProduct(product);
   };
 

@@ -18,6 +18,10 @@ export default function CartWidget() {
 
   const user = useAuthStore((state) => state.user);
   const openAuthModal = useAuthStore((state) => state.openAuthModal);
+  const isBarista =
+    user?.role === 'BARISTA' ||
+    user?.email?.toLowerCase().includes('barista') ||
+    user?.name?.toLowerCase().includes('barista');
   const cart = useCartStore((state) => state.cart);
   const ordered = useCartStore((state) => state.ordered);
   const toastMessage = useCartStore((state) => state.toastMessage);
@@ -47,6 +51,10 @@ export default function CartWidget() {
     setIsOpen(false);
     setIsPaymentOpen(true);
   };
+
+  if (isBarista) {
+    return null;
+  }
 
   return (
     <>
